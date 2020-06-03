@@ -8,6 +8,7 @@ import Axios from 'axios'
 import { Jwt } from '../../auth/Jwt'
 import { JwtPayload } from '../../auth/JwtPayload'
 
+
 const logger = createLogger('auth')
 
 const jwksUrl = 'https://kj-udagram.auth0.com/.well-known/jwks.json'
@@ -51,6 +52,8 @@ export const handler = async (
     }
   }
 }
+
+
 
 async function verifyToken(authHeader: string): Promise<JwtPayload> {
   try {
