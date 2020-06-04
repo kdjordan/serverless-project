@@ -9,8 +9,8 @@ const docClient = new AWS.DynamoDB.DocumentClient()
 const todosTable = process.env.TODOS_TABLE
 const usersTable = process.env.USERS_TABLE
 
-import { createLogger } from '../../utils/logger'
-const logger = createLogger('auth')
+// import { createLogger } from '../../utils/logger'
+// const logger = createLogger('auth')
 
 
 export const handler: APIGatewayProxyHandler = async (event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> => {
