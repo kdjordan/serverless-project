@@ -15,7 +15,8 @@ provider:
   environment:
     TODOS_TABLE: Todos-${self:provider.stage}
     USERS_TABLE: Users-${self:provider.stage}
-    IMAGES_BUCKET: kj-todos-images-$%{self:provider.stage}
+    S3_BUCKET: kjtodos-images-$%{self:provider.stage}
+    SIGNED_URL_EXPIRATION: 300
     TODOS_ID_INDEX: TodosIndex
 
   iamRoleStatements:
@@ -37,7 +38,7 @@ provider:
       Action:
         - s3:PutObject
         - s3:GetObject
-      Resource: arn:aws:s3:::${self:provider.environment.IMAGES_S3_BUCKET}/*
+      Resource: arn:aws:s3:::${self:provider.environment.S3_BUCKET}/*
 
 functions:
 
@@ -107,6 +108,7 @@ resources:
             KeyType: HASH
         BillingMode: PAY_PER_REQUEST
         TableName: ${self:provider.environment.USERS_TABLE}
+
     GatewayResponseDefault4XX:
       Type: AWS::ApiGateway::GatewayResponse
       Properties:
@@ -145,23 +147,38 @@ resources:
             Projection:
               ProjectionType: ALL # What attributes will be copied to an index
       
-      AttachmentsBucket:
-        Type: AWS::S3::Bucket
-        DependsOn: SNSTopicPolicy
-        Properties:
-          BucketName: ${self:provider.environment.IMAGES_BUCKET}
-          CorsConfiguration:
-            CorsRules:
-              -
-                AllowedOrigins:
-                  - '*'
-                AllowedHeaders:
-                  - '*'
-                AllowedMethods:
-                  - GET
-                  - PUT
-                  - POST
-                  - DELETE
-                  - HEAD
-                MaxAge: 3000
+    # AttachmentBucket:
+    #   Type: AWS::S3::Bucket
+    #   Properties:
+    #     BucketName: ${self:provider.environment.S3_BUCKET}
+    #     CorsConfiguration:
+    #       CorsRules:
+    #         -
+    #           AllowedOrigins:
+    #             - '*'
+    #           AllowedHeaders:
+    #             - '*'
+    #           AllowedMethods:
+    #             - GET
+    #             - PUT
+    #             - POST
+    #             - DELETE
+    #             - HEAD
+    #           MaxAge: 3000
+
+    # BucketPolicy:
+    #   Type: AWS::S3::BucketPolicy
+    #   Properties:
+    #     PolicyDocument:
+    #       Id: Policy
+    #       Version: "2012-10-17"
+    #       Statement:
+    #         - Sid: PublicReadForGetBucketObjects
+    #           Effect: Allow
+    #           Principal: '*'
+    #           Action: 
+    #             - 's3:GetObject'
+    #             - 's3:PutObject'
+    #           Resource: 'arn:aws:s3:::${self:provider.environment.S3_BUCKET}/*'
+    #     Bucket: AttachmentBucket
           
