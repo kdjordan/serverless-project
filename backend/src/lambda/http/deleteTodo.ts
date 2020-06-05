@@ -11,20 +11,21 @@ const todosTable = process.env.TODOS_TABLE
 export const handler: APIGatewayProxyHandler = async (event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> => {
   const todoId = event.pathParameters.todoId
 
-  console.log("TODO to be deleted", todoId)
   try {
     const id = getUserId(event)
-    let response = await docClient.delete({
+    await docClient.delete({
       TableName: todosTable,
-      Key: { userId: id, todoId }
+      Key: { 
+        userId: id, 
+        todoId 
+      }
     }).promise()
   
-    console.log("DB response", response);
+    
   } catch (e) {
     console.log("Error", e)
   }
 
-  // TODO: Remove a TODO item by id
   return {
     statusCode: 200,
     headers: {
