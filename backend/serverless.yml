@@ -4,6 +4,8 @@ service:
 plugins:
   - serverless-webpack
   - serverless-iam-roles-per-function
+  - serverless-reqvalidator-plugin
+  - serverless-aws-documentation
 
 provider:
   name: aws
@@ -15,10 +17,10 @@ provider:
   environment:
     TODOS_TABLE: Todos-${self:provider.stage}
     USERS_TABLE: Users-${self:provider.stage}
-    S3_BUCKET: kjtodos-images-$%{self:provider.stage}
+    S3_BUCKET: kjtodos-images-${self:provider.stage}
     SIGNED_URL_EXPIRATION: 300
     TODOS_ID_INDEX: TodosIndex
-
+    
   iamRoleStatements:
     - Effect: Allow
       Action:
@@ -39,6 +41,22 @@ provider:
         - s3:PutObject
         - s3:GetObject
       Resource: arn:aws:s3:::${self:provider.environment.S3_BUCKET}/*
+
+custom: 
+  documentation:
+    api:
+      info:
+        version: v1.0.0
+        title: Todos API
+        description: Serverless todo application
+    models:
+      - name: TodoRequest
+        contentType: application/json
+        schema: ${file(models/create-todo-request.json)}
+      - name: UpdateTodoRequest
+        contentType: application/json
+        schema: ${file(models/update-todo-request.json)}
+   
 
 functions:
 
@@ -65,6 +83,12 @@ functions:
           method: post
           path: todos
           cors: true
+          reqValidatorName: RequestBodyValidator
+          documentation:
+            summary: Create a new todo
+            description: Create a new todo
+            requestModels:
+              'application/json': TodoRequest
 
   # TODO: Configure this function
   UpdateTodo:
@@ -75,6 +99,12 @@ functions:
           method: patch
           path: todos/{todoId}
           cors: true
+          reqValidatorName: RequestBodyValidator
+          documentation:
+            summary: Create a new todo
+            description: Create a new todo
+            requestModels:
+              'application/json': UpdateTodoRequest
 
   # TODO: Configure this function
   DeleteTodo:
@@ -97,6 +127,17 @@ functions:
 
 resources:
   Resources:
+    GatewayResponseDefault4XX:
+      Type: AWS::ApiGateway::GatewayResponse
+      Properties:
+        ResponseParameters:
+          gatewayresponse.header.Access-Control-Allow-Origin: "'*'"
+          gatewayresponse.header.Access-Control-Allow-Headers: "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token'"
+          gatewayresponse.header.Access-Control-Allow-Methods: "'GET,OPTIONS,POST'"
+        ResponseType: DEFAULT_4XX
+        RestApiId:
+          Ref: ApiGatewayRestApi
+
     UsersDynamoDBTable:
       Type: AWS::DynamoDB::Table
       Properties:
@@ -108,18 +149,7 @@ resources:
             KeyType: HASH
         BillingMode: PAY_PER_REQUEST
         TableName: ${self:provider.environment.USERS_TABLE}
-
-    GatewayResponseDefault4XX:
-      Type: AWS::ApiGateway::GatewayResponse
-      Properties:
-        ResponseParameters:
-          gatewayresponse.header.Access-Control-Allow-Origin: "'*'"
-          gatewayresponse.header.Access-Control-Allow-Headers: "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token'"
-          gatewayresponse.header.Access-Control-Allow-Methods: "'GET,OPTIONS,POST'"
-        ResponseType: DEFAULT_4XX
-        RestApiId:
-          Ref: ApiGatewayRestApi
-    
+          
     TodosTable:
       Type: AWS::DynamoDB::Table
       Properties:
@@ -140,13 +170,13 @@ resources:
         LocalSecondaryIndexes:
           - IndexName: ${self:provider.environment.TODOS_ID_INDEX}
             KeySchema:
-              - AttributeName: userId
-                KeyType: HASH
-              - AttributeName: createdAt
-                KeyType: RANGE
+            - AttributeName: userId
+              KeyType: HASH
+            - AttributeName: createdAt
+              KeyType: RANGE
             Projection:
               ProjectionType: ALL # What attributes will be copied to an index
-      
+  
     AttachmentBucket:
       Type: AWS::S3::Bucket
       Properties:
@@ -180,5 +210,14 @@ resources:
                 - 's3:GetObject'
                 - 's3:PutObject'
               Resource: 'arn:aws:s3:::${self:provider.environment.S3_BUCKET}/*'
-        Bucket: AttachmentBucket
+        Bucket: !Ref AttachmentBucket
           
+    RequestBodyValidator:
+      Type: AWS::ApiGateway::RequestValidator
+      Properties:
+        Name: 'request-body-validator'
+        RestApiId:
+          Ref: ApiGatewayRestApi
+        ValidateRequestBody: true
+        ValidateRequestParameters: false
+        
