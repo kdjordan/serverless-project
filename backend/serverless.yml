@@ -4,6 +4,8 @@ service:
 plugins:
   - serverless-webpack
   - serverless-iam-roles-per-function
+  - serverless-reqvalidator-plugin
+  - serverless-aws-documentation
 
 provider:
   name: aws
@@ -15,9 +17,24 @@ provider:
   environment:
     TODOS_TABLE: Todos-${self:provider.stage}
     USERS_TABLE: Users-${self:provider.stage}
-    S3_BUCKET: kjtodos-images-$%{self:provider.stage}
+    S3_BUCKET: kjtodos-images-${self:provider.stage}
     SIGNED_URL_EXPIRATION: 300
     TODOS_ID_INDEX: TodosIndex
+
+custom: 
+  documentation:
+    api:
+      info:
+        version: v1.0.0
+        title: Udagram API
+        description: Serverless application for images sharing
+  models:
+    - name: TodoRequest
+      contentType: application/json
+      schema: ${file(models/create-todo-request.json)}
+    # - name: UpdateTodoRequest
+    #   contentType: application/json
+    #   schema: ${file(models/create-todo-update-request.json)}
 
   iamRoleStatements:
     - Effect: Allow
@@ -65,6 +82,12 @@ functions:
           method: post
           path: todos
           cors: true
+          reqValidatorName: RequestBodyValidator
+          documentation:
+            summary: Create a new image
+            description: Create a new image
+            requestModels:
+              'application/json': ImageRequest
 
   # TODO: Configure this function
   UpdateTodo:
@@ -180,5 +203,5 @@ resources:
                 - 's3:GetObject'
                 - 's3:PutObject'
               Resource: 'arn:aws:s3:::${self:provider.environment.S3_BUCKET}/*'
-        Bucket: AttachmentBucket
+        Bucket: !Ref AttachmentBucket
           
