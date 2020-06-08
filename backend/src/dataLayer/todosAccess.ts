@@ -92,30 +92,30 @@ export class TodoAccess {
 
    }
 
-   async updateTodo(todoId: string, userId: string, todoItem: TodoUpdate): Promise<Boolean> {
-       console.log("THE INCOMING TODO ", todoItem)
+   async updateTodo(todoId: string, userId: string, todoItem: TodoUpdate): Promise<TodoUpdate>{
+       
        try {
-           let todo = await this.docClient.update({
+           await this.docClient.update({
              TableName: this.todosTable,
              Key: {
                 userId,
                 todoId
               },
-              UpdateExpression: "set theName = :n, isDone = :d, theDueDate = :due",
+              UpdateExpression: "set #theName = :n, #isDone = :d, #theDueDate = :due",
               ExpressionAttributeValues: {
                   ":n": todoItem.name,
                   ":d": todoItem.done,
                   ":due": todoItem.dueDate
               },
               ExpressionAttributeNames: {
-                  "theName": 'name',
-                  "isDone": 'done',
-                  "theDueDate": 'dueDate'
+                  "#theName": 'name',
+                  "#isDone": 'done',
+                  "#theDueDate": 'dueDate'
               },
               ReturnValues:"UPDATED_NEW"
            }).promise()
-           console.log("UPDATED TODO WITH ", todo)
-           return true
+        
+           return todoItem
 
        } catch (e) {
            console.log("ERROR updating TODO in ACCESS ", e)

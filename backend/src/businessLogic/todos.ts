@@ -42,7 +42,7 @@ export async function createTodo(event: APIGatewayProxyEvent): Promise<TodoItem>
     })
 }
 
-export async function updateTodo(event: APIGatewayProxyEvent): Promise<Boolean> {
+export async function updateTodo(event: APIGatewayProxyEvent): Promise<UpdateTodoRequest> {
     const updatedTodo: UpdateTodoRequest = JSON.parse(event.body)
     const todoId = event.pathParameters.todoId
     const userId = getUserId(event)
