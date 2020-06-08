@@ -1,13 +1,11 @@
 import * as AWS  from 'aws-sdk'
 import * as AWSXRay from 'aws-xray-sdk'
 import { DocumentClient } from 'aws-sdk/clients/dynamodb'
-// import { APIGatewayProxyEvent, APIGatewayProxyResult, APIGatewayProxyHandler } from 'aws-lambda'
-import { APIGatewayProxyEvent } from 'aws-lambda'
-import { getUserId } from '../lambda/utils' 
 
 const XAWS = AWSXRay.captureAWS(AWS)
 
 import { TodoItem } from '../models/TodoItem'
+import { TodoUpdate } from '../models/TodoUpdate'
 import { User } from '../models/User'
 
 export class TodoAccess {
@@ -18,12 +16,8 @@ export class TodoAccess {
     private readonly usersTable = process.env.USERS_TABLE ) {
   }
 
-  async checkUserExists(event: APIGatewayProxyEvent): Promise<User> {
+  async checkUserExists(userId: string): Promise<User> {
     try {
-        // get ID from auth header
-        const userId = getUserId(event)
-    
-        //see if user exists in USERS_TABLE
         const result = await this.docClient.query({
             TableName: this.usersTable,
             KeyConditionExpression: 'id = :id',
@@ -43,7 +37,8 @@ export class TodoAccess {
     
   }
 
-  async addUser(userId: string): Promise<boolean> {
+  async addUser(userId: string): Promise<User> {
+      //add User to Users Table
       try {
         const newId = { id: userId }
 
@@ -52,7 +47,12 @@ export class TodoAccess {
             Item: newId
         }).promise()
 
-        return true
+        let user = {
+            count: 0,
+            id: newId.id
+        }
+
+        return user
 
       } catch (e) {
           console.log("ERROR adding user in ACCESS", e)
@@ -61,38 +61,83 @@ export class TodoAccess {
   }
 
    async getAllTodos(userId: string): Promise<TodoItem[]> {
-     console.log('Getting all todos')
-
-     let todos = await this.docClient.query({
-        TableName: this.todosTable,
-        KeyConditionExpression: 'userId = :id',
-        ExpressionAttributeValues: {
-            ':id': userId
-        }
-    }).promise()
-
-     const items = todos.Items
-     return items as TodoItem[]
+    try {
+        let todos = await this.docClient.query({
+           TableName: this.todosTable,
+           KeyConditionExpression: 'userId = :id',
+           ExpressionAttributeValues: {
+               ':id': userId
+           }
+       }).promise()
+   
+        const items = todos.Items
+        return items as TodoItem[]
+    } catch (e) {
+        console.log("ERROR getting todos in ACCESS", e)
+    }
    }
 
    async createTodo(todoItem: TodoItem): Promise<TodoItem> {
-     await this.docClient.put({
-       TableName: this.todosTable,
-       Item: todoItem
-     }).promise()
+       try {
+           await this.docClient.put({
+             TableName: this.todosTable,
+             Item: todoItem
+           }).promise()
 
-     return todoItem
+           return todoItem
+
+       } catch (e) {
+           console.log("ERROR creating TODO in ACCESS")
+       }
+
    }
 
-//    async deleteTodo(todoItem: TodoItem): Promise<TodoItem> {
-//     TableName: this.todosTable,
-//       Key: { 
-//         userId: id, 
-//         todoId 
-//       }
-//     }).promise()
+   async updateTodo(todoId: string, userId: string, todoItem: TodoUpdate): Promise<Boolean> {
+       console.log("THE INCOMING TODO ", todoItem)
+       try {
+           let todo = await this.docClient.update({
+             TableName: this.todosTable,
+             Key: {
+                userId,
+                todoId
+              },
+              UpdateExpression: "set theName = :n, isDone = :d, theDueDate = :due",
+              ExpressionAttributeValues: {
+                  ":n": todoItem.name,
+                  ":d": todoItem.done,
+                  ":due": todoItem.dueDate
+              },
+              ExpressionAttributeNames: {
+                  "theName": 'name',
+                  "isDone": 'done',
+                  "theDueDate": 'dueDate'
+              },
+              ReturnValues:"UPDATED_NEW"
+           }).promise()
+           console.log("UPDATED TODO WITH ", todo)
+           return true
 
-    //  return todoItem
+       } catch (e) {
+           console.log("ERROR updating TODO in ACCESS ", e)
+       }
+
+   }
+
+   async deleteTodo(todoId: string, id: string): Promise<string> {
+       try {
+           await this.docClient.delete({
+               TableName: this.todosTable,
+               Key: { 
+                   userId: id, 
+                   todoId 
+               }
+               }).promise()
+       
+           return todoId
+       } catch (e) {
+        console.log("ERROR deleting TODO in ACCESS")
+       }
+    }
 }
 
 
