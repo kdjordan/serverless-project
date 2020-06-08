@@ -14,6 +14,10 @@ provider:
   stage: ${opt:stage, 'dev'}
   region: ${opt:region, 'us-east-2'}
 
+  tracing:
+    lambda: true
+    apiGateway: true
+
   environment:
     TODOS_TABLE: Todos-${self:provider.stage}
     USERS_TABLE: Users-${self:provider.stage}
