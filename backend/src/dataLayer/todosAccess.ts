@@ -29,7 +29,7 @@ export class TodoAccess {
             Bucket: this.imagesBucket,
             Key: todoId,
             Expires: Number(this.urlExpiration)
-        })    
+        })
 
         await this.updateUrl(imageUrl, todoId, userId)
     
