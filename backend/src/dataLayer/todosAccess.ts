@@ -3,6 +3,9 @@ import * as AWSXRay from 'aws-xray-sdk'
 import { DocumentClient } from 'aws-sdk/clients/dynamodb'
 
 const XAWS = AWSXRay.captureAWS(AWS)
+const s3 = new XAWS.S3({
+    signatureVersion: 'v4'
+  })
 
 import { TodoItem } from '../models/TodoItem'
 import { TodoUpdate } from '../models/TodoUpdate'
@@ -13,7 +16,34 @@ export class TodoAccess {
   constructor(
     private readonly docClient: DocumentClient = createDynamoDBClient(),
     private readonly todosTable = process.env.TODOS_TABLE,
-    private readonly usersTable = process.env.USERS_TABLE ) {
+    private readonly usersTable = process.env.USERS_TABLE,
+    private readonly imagesBucket = process.env.S3_BUCKET,
+    private readonly urlExpiration = process.env.SIGNED_URL_EXPIRATION ) {
+  }
+
+  async getSignedUrl(todoId: string): Promise<any> {
+      try {
+        let imageUrl = createAttachmentUrl(this.imagesBucket, todoId)
+
+        const uploadUrl = s3.getSignedUrl('putObject', {
+            Bucket: this.imagesBucket,
+            Key: todoId,
+            Expires: Number(this.urlExpiration)
+        })    
+        console.log("Image URL ", imageUrl);
+        console.log("upload URL ", uploadUrl);
+
+        await this.updateUrl(imageUrl, todoId)
+        
+        
+        return {
+            uploadUrl,
+            imageUrl
+        }
+      } catch (e) {
+        console.log("ERROR getting url in ACCESS", e);
+        
+      }
   }
 
   async checkUserExists(userId: string): Promise<User> {
@@ -23,7 +53,6 @@ export class TodoAccess {
             KeyConditionExpression: 'id = :id',
             ExpressionAttributeValues: { ':id': userId }
         }).promise()
-        console.log("The result", result);
         
         const theUser = {
             count: result.Count,
@@ -138,6 +167,33 @@ export class TodoAccess {
         console.log("ERROR deleting TODO in ACCESS")
        }
     }
+    // TODO UPDATE todos Table with attachment URL
+    async updateUrl(url: string, todoId: string) {
+        try {   
+            await this.docClient.update({
+                TableName: this.todosTable,
+                Key: {
+    
+                    todoId
+                },
+                UpdateExpression: "set #attach = :a",
+                ExpressionAttributeValues: {
+                  ":a": url,
+                  
+                },
+                ExpressionAttributeNames: {
+                  "#attach": 'attachmentUrl',
+                },
+                 ReturnValues:"UPDATED_NEW"
+
+            }).promise()
+        } catch (e) {
+            console.log("ERROR in updateURL ", e);
+            
+        }
+
+    }
+    
 }
 
 
@@ -152,3 +208,8 @@ function createDynamoDBClient() {
 
   return new XAWS.DynamoDB.DocumentClient()
 }
+
+function createAttachmentUrl(bucketName: string, todoId: string): string {
+    return `https://${bucketName}.s3.amazonaws.com/${todoId}`
+}
+

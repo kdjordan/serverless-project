@@ -12,14 +12,23 @@ import { APIGatewayProxyEvent } from 'aws-lambda'
 
 const todoAccess = new TodoAccess()
 
+export async function getSignedUrl(event: APIGatewayProxyEvent): Promise<String> {
+    const todoId = event.pathParameters.todoId
+    
+    let theUrl = await todoAccess.getSignedUrl(todoId)
+    //add to Todos Table
+    
+    console.log("URL going back ", theUrl);
+    return theUrl
+}
+
 export async function getAllTodos(userId: string): Promise<TodoItem[]> {
   return todoAccess.getAllTodos(userId)
 }
 
 export async function checkUserExists(event: APIGatewayProxyEvent): Promise<User> {
     const userId = getUserId(event)
-    const theUser = await todoAccess.checkUserExists(userId)
-    return theUser
+    return await todoAccess.checkUserExists(userId)
 }
 
 export async function addUser(userId: string): Promise<User> {
@@ -46,9 +55,6 @@ export async function updateTodo(event: APIGatewayProxyEvent): Promise<UpdateTod
     const updatedTodo: UpdateTodoRequest = JSON.parse(event.body)
     const todoId = event.pathParameters.todoId
     const userId = getUserId(event)
-    
-    console.log("THE TODO ID", todoId)
-    console.log("THE UPDATED TODO", updatedTodo)
 
     return await todoAccess.updateTodo(todoId, userId, updatedTodo)
 }
@@ -57,5 +63,6 @@ export async function deleteTodo(event: APIGatewayProxyEvent){
     let todoId = event.pathParameters.todoId
     let userId = getUserId(event)
     
-    return todoAccess.deleteTodo(todoId, userId)
+    return await todoAccess.deleteTodo(todoId, userId)
 }
+
