@@ -21,7 +21,7 @@ export class TodoAccess {
     private readonly urlExpiration = process.env.SIGNED_URL_EXPIRATION ) {
   }
 
-  async getSignedUrl(todoId: string): Promise<any> {
+  async getSignedUrl(todoId: string, userId: string): Promise<any> {
       try {
         let imageUrl = createAttachmentUrl(this.imagesBucket, todoId)
 
@@ -33,7 +33,7 @@ export class TodoAccess {
         console.log("Image URL ", imageUrl);
         console.log("upload URL ", uploadUrl);
 
-        await this.updateUrl(imageUrl, todoId)
+        await this.updateUrl(imageUrl, todoId, userId)
         
         
         return {
@@ -168,12 +168,12 @@ export class TodoAccess {
        }
     }
     // TODO UPDATE todos Table with attachment URL
-    async updateUrl(url: string, todoId: string) {
+    async updateUrl(url: string, todoId: string, userId: string) {
         try {   
             await this.docClient.update({
                 TableName: this.todosTable,
                 Key: {
-    
+                    userId,
                     todoId
                 },
                 UpdateExpression: "set #attach = :a",

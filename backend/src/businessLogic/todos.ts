@@ -14,8 +14,8 @@ const todoAccess = new TodoAccess()
 
 export async function getSignedUrl(event: APIGatewayProxyEvent): Promise<String> {
     const todoId = event.pathParameters.todoId
-    
-    let theUrl = await todoAccess.getSignedUrl(todoId)
+    const userId = getUserId(event)
+    let theUrl = await todoAccess.getSignedUrl(todoId, userId)
     //add to Todos Table
     
     console.log("URL going back ", theUrl);
