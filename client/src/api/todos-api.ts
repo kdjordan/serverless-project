@@ -13,7 +13,7 @@ export async function getTodos(idToken: string): Promise<Todo[]> {
       'Authorization': `Bearer ${idToken}`
     },
   })
-  console.log('Todos:', response.data)
+  
   return response.data.items
 }
 
@@ -27,7 +27,7 @@ export async function createTodo(
       'Authorization': `Bearer ${idToken}`
     }
   })
-  console.log(response)
+ 
   return response.data.item
 }
 
@@ -66,7 +66,7 @@ export async function getUploadUrl(
       'Authorization': `Bearer ${idToken}`
     }
   })
-  console.log("Response is ", response.data)
+  
   return response.data.uploadUrl
 }
 

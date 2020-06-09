@@ -30,12 +30,9 @@ export class TodoAccess {
             Key: todoId,
             Expires: Number(this.urlExpiration)
         })    
-        console.log("Image URL ", imageUrl);
-        console.log("upload URL ", uploadUrl);
 
         await this.updateUrl(imageUrl, todoId, userId)
-        
-        
+    
         return {
             uploadUrl,
             imageUrl
@@ -122,7 +119,6 @@ export class TodoAccess {
    }
 
    async updateTodo(todoId: string, userId: string, todoItem: TodoUpdate): Promise<TodoUpdate>{
-       
        try {
            await this.docClient.update({
              TableName: this.todosTable,

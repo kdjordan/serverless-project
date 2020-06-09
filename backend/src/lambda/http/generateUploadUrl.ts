@@ -10,7 +10,7 @@ export const handler: APIGatewayProxyHandler = async (event: APIGatewayProxyEven
  
   try {
     let uploadUrl = await getSignedUrl(event)
-    console.log("GOING TO CLIENZT ", uploadUrl)
+   
     return {
       statusCode: 200,
       headers: {

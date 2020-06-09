@@ -15,15 +15,11 @@ const todoAccess = new TodoAccess()
 export async function getSignedUrl(event: APIGatewayProxyEvent): Promise<String> {
     const todoId = event.pathParameters.todoId
     const userId = getUserId(event)
-    let theUrl = await todoAccess.getSignedUrl(todoId, userId)
-    //add to Todos Table
-    
-    console.log("URL going back ", theUrl);
-    return theUrl
+    return await todoAccess.getSignedUrl(todoId, userId)
 }
 
 export async function getAllTodos(userId: string): Promise<TodoItem[]> {
-  return todoAccess.getAllTodos(userId)
+  return await todoAccess.getAllTodos(userId)
 }
 
 export async function checkUserExists(event: APIGatewayProxyEvent): Promise<User> {
