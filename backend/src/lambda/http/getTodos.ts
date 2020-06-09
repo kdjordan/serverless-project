@@ -1,87 +1,45 @@
 import 'source-map-support/register'
 
 import { APIGatewayProxyEvent, APIGatewayProxyResult, APIGatewayProxyHandler } from 'aws-lambda'
-import { getUserId } from '../utils' 
-import * as AWS  from 'aws-sdk'
-
-const docClient = new AWS.DynamoDB.DocumentClient()
-
-const todosTable = process.env.TODOS_TABLE
-const usersTable = process.env.USERS_TABLE
-
-// import { createLogger } from '../../utils/logger'
-// const logger = createLogger('auth')
-
+import { getAllTodos, checkUserExists, addUser } from '../../businessLogic/todos'
 
 export const handler: APIGatewayProxyHandler = async (event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> => {
-  // TODO: Get all TODO items for a current user
-  // console.log("Caller event", event.requestContext.authorizer.principalId)
   
   try {
-    // check to see if user exists in users table
-    const id = getUserId(event)
-    
-    const theCount = await checkUserExists(id)
-    
-    //if so, get any todos they have
-    if (theCount !== 0) {
-      let todos = await docClient.query({
-        TableName: todosTable,
-        KeyConditionExpression: 'userId = :id',
-        ExpressionAttributeValues: {
-            ':id': id
-        }
-      }).promise()
+    // check to see if user exists in Users table
+    let theUser = await checkUserExists(event)
+    let todos = []
 
-      return {
-        statusCode: 200,
-        headers: {
-          'Access-Control-Allow-Origin': '*',
-          'Access-Control-Allow-Credentials': true
-        },
-        body: JSON.stringify({items: todos.Items})
-      }
+    // if so, get any todos they have
+    if (theUser.count !== 0) {
+      todos = await getAllTodos(theUser.id)
     } else {
-      //if not add user to users table
-      const newId = {
-        id
-      }
+      //add User to Users Table
+      await addUser(theUser.id)
+    }
 
-      await docClient.put({
-        TableName: usersTable,
-        Item: newId
-      }).promise()
-
-      console.log("REURNING")
+    return {
+      statusCode: 200,
+      headers: {
+        'Access-Control-Allow-Origin': '*',
+        'Access-Control-Allow-Credentials': true
+      },
+      body: JSON.stringify({items: todos})
+    }
+   
+  } catch (e) {
+      console.log("ERROR in getTodos", e);
+      
       return {
-        statusCode: 201,
+        statusCode: 502,
         headers: {
           'Access-Control-Allow-Origin': '*',
           'Access-Control-Allow-Credentials': true
         },
-        body: JSON.stringify({items: []})
+        body: JSON.stringify({error: `${e}`})
       }
-    }
-  } catch (e) {
-    console.log("ERROR", e)
+      
   }
 }
 
 
-async function checkUserExists(userId: string) {
-  try {
-    
-    const result = await docClient.query({
-      TableName: usersTable,
-      KeyConditionExpression: 'id = :id',
-      ExpressionAttributeValues: { ':id': userId }
-    }).promise()
-    
-    return result.Count
-
-  } catch (e) {
-    
-    return 0
-  }
-  
-}
